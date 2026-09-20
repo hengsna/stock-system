@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Management System</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        /* Custom scrollbar for sidebar */
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: #94a3b8; /* slate-400 */
+            border-radius: 10px;
+        }
+        .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+            background: #64748b; /* slate-500 */
+        }
+        
+        /* Smooth transitions for accordion */
+        .submenu {
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .submenu.open {
+            max-height: 400px;
+            opacity: 1;
+        }
+    </style>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brandBlue: '#1e3a8a', /* blue-900 */
+                        brandBlueLight: '#2563eb', /* blue-600 */
+                        brandBlueDark: '#172554', /* blue-950 */
+                        brandOrange: '#f97316', /* orange-500 */
+                        brandOrangeDark: '#ea580c', /* orange-600 */
+                        brandOrangeLight: '#ffedd5', /* orange-100 */
+                        brandYellow: '#facc15', /* yellow-400 */
+                        brandYellowDark: '#eab308', /* yellow-500 */
+                        brandYellowLight: '#fef08a', /* yellow-200 */
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="flex h-screen overflow-hidden text-slate-800 selection:bg-brandOrange selection:text-white">
+
+    <!-- Mobile sidebar backdrop -->
+    <div id="sidebarBackdrop" class="fixed inset-0 bg-slate-900 bg-opacity-50 z-20 hidden lg:hidden transition-opacity"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-72 bg-sky-100 text-slate-800 transform -translate-x-full lg:translate-x-0 lg:static lg:inset-auto flex flex-col transition-transform duration-300 ease-in-out shadow-lg border-r border-sky-200">
+        <!-- Brand/Logo -->
+        <div class="flex items-center justify-center h-16 bg-sky-200 border-b border-sky-300 flex-shrink-0">
+            <i class="fa-solid fa-boxes-stacked text-brandBlueLight text-2xl mr-3"></i>
+            <span class="text-xl font-bold text-brandBlueDark tracking-wide">Stock<span class="text-brandBlueLight">Master</span></span>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="flex-1 overflow-y-auto sidebar-scroll py-4 px-3 space-y-1" id="nav-container">
+            <!-- Menus will be dynamically injected via JS -->
+        </nav>
+        
+        <!-- User Profile Snippet Bottom -->
+        <div class="p-4 border-t border-sky-300 flex items-center space-x-3 bg-sky-200 flex-shrink-0">
+            <div class="w-10 h-10 rounded-full bg-brandBlue flex items-center justify-center text-white font-bold shadow-sm">
+                JD
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-slate-800">John Doe</p>
+                <p class="text-xs text-slate-600">System Admin</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col overflow-hidden relative">
+        
+        <!-- Top Navbar -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-8 z-10 flex-shrink-0 shadow-sm">
+            <div class="flex items-center">
+                <button id="mobileMenuBtn" class="text-brandBlue hover:text-brandOrange focus:outline-none lg:hidden mr-4 transition-colors">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <div class="hidden sm:flex relative">
+                    <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" placeholder="Search inventory..." class="pl-10 pr-4 py-2 bg-slate-100 border-transparent rounded-lg focus:bg-white focus:outline-none focus:border-brandBlueLight focus:ring-1 focus:ring-brandBlueLight w-64 text-sm transition-all">
+                </div>
+            </div>
+            <div class="flex items-center space-x-5">
+                <button class="relative text-brandBlue hover:text-brandOrange transition-colors">
+                    <i class="fa-regular fa-bell text-xl"></i>
+                    <span class="absolute top-0 right-0 -mt-1 -mr-1 flex h-4 w-4">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brandOrange opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-4 w-4 bg-brandOrange text-[9px] font-bold text-white items-center justify-center shadow">3</span>
+                    </span>
+                </button>
+                <div class="w-8 h-8 rounded-full bg-brandBlueLight flex items-center justify-center text-white font-bold cursor-pointer hover:bg-brandBlue transition-colors">
+                    <i class="fa-solid fa-user text-sm"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Container -->
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 lg:p-8" id="main-content">
+            
+            <!-- Dashboard View -->
+            <div id="view-dashboard" class="block space-y-6 max-w-7xl mx-auto">
+                
+                <!-- Page Header & Quick Actions -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-brandBlue">Dashboard Overview</h1>
+                        <p class="text-sm text-slate-500 mt-1">Monitor your stock metrics and recent movements.</p>
+                    </div>
+                    <!-- Quick Actions -->
+                    <div class="flex flex-wrap gap-2">
+                        <button class="px-4 py-2 bg-brandBlue hover:bg-brandBlueDark text-white text-sm font-medium rounded-lg shadow-md transition-colors flex items-center">
+                            <i class="fa-solid fa-plus mr-2"></i> Add Product
+                        </button>
+                        <button class="px-4 py-2 bg-brandOrange hover:bg-brandOrangeDark text-white text-sm font-medium rounded-lg shadow-md transition-colors flex items-center">
+                            <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i> Receive Stock
+                        </button>
+                        <button class="px-4 py-2 bg-white border border-slate-300 text-brandBlue hover:bg-slate-50 text-sm font-medium rounded-lg shadow-sm transition-colors flex items-center">
+                            <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> Issue Stock
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+                    <!-- Card 1 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center border-l-4 border-l-brandBlue">
+                        <div class="w-12 h-12 rounded-full bg-blue-100 text-brandBlue flex items-center justify-center text-xl mr-4">
+                            <i class="fa-solid fa-box"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Total Products</p>
+                            <h3 class="text-2xl font-bold text-slate-800">2,845</h3>
+                        </div>
+                    </div>
+                    <!-- Card 2 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center border-l-4 border-l-brandBlueLight">
+                        <div class="w-12 h-12 rounded-full bg-blue-50 text-brandBlueLight flex items-center justify-center text-xl mr-4">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Total Stock Value</p>
+                            <h3 class="text-2xl font-bold text-slate-800">$342,500</h3>
+                        </div>
+                    </div>
+                    <!-- Card 3 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center border-l-4 border-l-brandOrange">
+                        <div class="w-12 h-12 rounded-full bg-orange-100 text-brandOrange flex items-center justify-center text-xl mr-4">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Low Stock Alerts</p>
+                            <h3 class="text-2xl font-bold text-slate-800">18</h3>
+                        </div>
+                    </div>
+                    <!-- Card 4 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center border-l-4 border-l-red-500">
+                        <div class="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center text-xl mr-4">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Out-of-Stock Items</p>
+                            <h3 class="text-2xl font-bold text-slate-800">5</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Content Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Chart Section -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 lg:col-span-2 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-brandBlue">Stock Movement (6 Months)</h2>
+                            <div class="flex items-center space-x-2 text-sm text-slate-500">
+                                <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-brandBlueLight mr-1"></span> In</span>
+                                <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-brandOrange mr-1"></span> Out</span>
+                            </div>
+                        </div>
+                        <div class="flex-1 relative w-full h-64 md:h-80">
+                            <canvas id="stockMovementChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Recent Transactions Widget -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold text-brandBlue">Recent Activity</h2>
+                            <button class="text-sm text-brandOrange hover:text-brandOrangeDark font-medium transition-colors">View All</button>
+                        </div>
+                        <ul class="space-y-4 flex-1 overflow-y-auto">
+                            <li class="flex items-start pb-3 border-b border-slate-50">
+                                <div class="w-8 h-8 rounded bg-brandBlueLight/10 text-brandBlueLight flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
+                                    <i class="fa-solid fa-arrow-down"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-semibold text-slate-800">Stock Received</p>
+                                    <p class="text-xs text-slate-500">PO-2023-089 • Laptops</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-sm font-bold text-brandBlueLight">+50</span>
+                                    <p class="text-[10px] text-slate-400">2h ago</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start pb-3 border-b border-slate-50">
+                                <div class="w-8 h-8 rounded bg-brandOrange/10 text-brandOrange flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
+                                    <i class="fa-solid fa-arrow-up"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-semibold text-slate-800">Stock Issued</p>
+                                    <p class="text-xs text-slate-500">SO-2023-144 • Monitors</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-sm font-bold text-brandOrange">-12</span>
+                                    <p class="text-[10px] text-slate-400">5h ago</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start pb-3 border-b border-slate-50">
+                                <div class="w-8 h-8 rounded bg-brandOrange/10 text-brandOrange flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
+                                    <i class="fa-solid fa-arrow-up"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-semibold text-slate-800">Stock Issued</p>
+                                    <p class="text-xs text-slate-500">SO-2023-145 • Keyboards</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-sm font-bold text-brandOrange">-30</span>
+                                    <p class="text-[10px] text-slate-400">1d ago</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="w-8 h-8 rounded bg-slate-100 text-slate-500 flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
+                                    <i class="fa-solid fa-sliders"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-semibold text-slate-800">Adjustment</p>
+                                    <p class="text-xs text-slate-500">ADJ-092 • Damaged Goods</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-sm font-bold text-slate-600">-3</span>
+                                    <p class="text-[10px] text-slate-400">2d ago</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions Table (Detailed) -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <h2 class="text-lg font-semibold text-brandBlue">Latest Transactions</h2>
+                        <button class="p-2 text-slate-400 hover:text-brandBlue transition-colors"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="p-4 font-medium">Date</th>
+                                    <th class="p-4 font-medium">Reference</th>
+                                    <th class="p-4 font-medium">Type</th>
+                                    <th class="p-4 font-medium">Item</th>
+                                    <th class="p-4 font-medium text-right">Quantity</th>
+                                    <th class="p-4 font-medium text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm text-slate-700 divide-y divide-slate-100">
+                                <tr class="hover:bg-slate-50 transition-colors group">
+                                    <td class="p-4 text-slate-500">Sep 20, 2026</td>
+                                    <td class="p-4 font-medium text-brandBlue">PO-2023-089</td>
+                                    <td class="p-4"><span class="px-2.5 py-1 bg-blue-100 text-brandBlueLight rounded-full text-xs font-semibold border border-blue-200">Stock In</span></td>
+                                    <td class="p-4">Dell XPS 15 Laptops</td>
+                                    <td class="p-4 text-right font-bold text-brandBlueLight">+50</td>
+                                    <td class="p-4 text-center"><span class="text-emerald-500"><i class="fa-solid fa-circle-check"></i></span></td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition-colors group">
+                                    <td class="p-4 text-slate-500">Sep 20, 2026</td>
+                                    <td class="p-4 font-medium text-brandBlue">SO-2023-144</td>
+                                    <td class="p-4"><span class="px-2.5 py-1 bg-orange-100 text-brandOrangeDark rounded-full text-xs font-semibold border border-orange-200">Stock Out</span></td>
+                                    <td class="p-4">LG 27" 4K Monitors</td>
+                                    <td class="p-4 text-right font-bold text-brandOrange">-12</td>
+                                    <td class="p-4 text-center"><span class="text-emerald-500"><i class="fa-solid fa-circle-check"></i></span></td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition-colors group">
+                                    <td class="p-4 text-slate-500">Sep 19, 2026</td>
+                                    <td class="p-4 font-medium text-brandBlue">SO-2023-145</td>
+                                    <td class="p-4"><span class="px-2.5 py-1 bg-orange-100 text-brandOrangeDark rounded-full text-xs font-semibold border border-orange-200">Stock Out</span></td>
+                                    <td class="p-4">Mechanical Keyboards</td>
+                                    <td class="p-4 text-right font-bold text-brandOrange">-30</td>
+                                    <td class="p-4 text-center"><span class="text-emerald-500"><i class="fa-solid fa-circle-check"></i></span></td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition-colors group">
+                                    <td class="p-4 text-slate-500">Sep 18, 2026</td>
+                                    <td class="p-4 font-medium text-brandBlue">ADJ-092</td>
+                                    <td class="p-4"><span class="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-semibold border border-slate-200">Adjustment</span></td>
+                                    <td class="p-4">Office Chairs (Damaged)</td>
+                                    <td class="p-4 text-right font-bold text-slate-500">-3</td>
+                                    <td class="p-4 text-center"><span class="text-emerald-500"><i class="fa-solid fa-circle-check"></i></span></td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition-colors group">
+                                    <td class="p-4 text-slate-500">Sep 17, 2026</td>
+                                    <td class="p-4 font-medium text-brandBlue">PO-2023-088</td>
+                                    <td class="p-4"><span class="px-2.5 py-1 bg-blue-100 text-brandBlueLight rounded-full text-xs font-semibold border border-blue-200">Stock In</span></td>
+                                    <td class="p-4">Logitech MX Master 3</td>
+                                    <td class="p-4 text-right font-bold text-brandBlueLight">+100</td>
+                                    <td class="p-4 text-center"><span class="text-emerald-500"><i class="fa-solid fa-circle-check"></i></span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- 1. Define Sidebar Navigation Structure (14 Categories) ---
+        const navStructure = [
+            {
+                id: 'dashboard',
+                title: 'Dashboard',
+                icon: 'fa-gauge-high',
+                items: [] // Empty items means it's a direct link
+            },
+            {
+                id: 'products',
+                title: 'Products',
+                icon: 'fa-box-open',
+                items: ['Product List', 'Add Product', 'Categories', 'Brands']
+            },
+            {
+                id: 'inventory',
+                title: 'Inventory',
+                icon: 'fa-clipboard-list',
+                items: ['Current Stock', 'Stock by Warehouse', 'Stock Ledger']
+            },
+            {
+                id: 'purchasing',
+                title: 'Purchasing',
+                icon: 'fa-cart-shopping',
+                items: ['Suppliers', 'Purchase Orders', 'Goods Received']
+            },
+            {
+                id: 'stock-in',
+                title: 'Stock In',
+                icon: 'fa-arrow-turn-down',
+                items: ['Receive Stock', 'Opening Stock']
+            },
+            {
+                id: 'stock-out',
+                title: 'Stock Out',
+                icon: 'fa-arrow-turn-up',
+                items: ['Issue Stock', 'Sales Order']
+            },
+            {
+                id: 'warehouse',
+                title: 'Warehouse',
+                icon: 'fa-warehouse',
+                items: ['Warehouse List', 'Locations/Bins']
+            },
+            {
+                id: 'stock-adjustment',
+                title: 'Stock Adjustment',
+                icon: 'fa-sliders',
+                items: ['Increase/Decrease', 'Damaged Stock']
+            },
+            {
+                id: 'stock-count',
+                title: 'Stock Count',
+                icon: 'fa-clipboard-check',
+                items: ['Physical Count', 'Variance']
+            },
+            {
+                id: 'sales-orders',
+                title: 'Sales / Orders',
+                icon: 'fa-file-invoice-dollar',
+                items: ['Customers', 'Sales Orders']
+            },
+            {
+                id: 'reports',
+                title: 'Reports',
+                icon: 'fa-chart-line',
+                items: ['Stock Balance', 'Stock Movement']
+            },
+            {
+                id: 'notifications',
+                title: 'Notifications',
+                icon: 'fa-bell',
+                items: ['Low Stock', 'Out of Stock']
+            },
+            {
+                id: 'users',
+                title: 'Users & Permissions',
+                icon: 'fa-users-gear',
+                items: ['Users', 'Roles']
+            },
+            {
+                id: 'settings',
+                title: 'Settings',
+                icon: 'fa-gear',
+                items: ['Company Profile', 'System Settings']
+            }
+        ];
+
+        // --- 2. Render Sidebar HTML dynamically ---
+        const navContainer = document.getElementById('nav-container');
+        let navHTML = '';
+        
+        navStructure.forEach((category, index) => {
+            const isDashboard = category.id === 'dashboard';
+            const isActive = isDashboard; // Set Dashboard active by default
+            const hasSubMenu = category.items.length > 0;
+            
+            navHTML += `
+                <div class="nav-item mb-1">
+                    <button class="nav-toggle w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-700 hover:bg-sky-200 hover:text-brandBlueDark transition-all duration-200 group ${isActive ? 'bg-sky-200 border-l-4 border-brandBlueLight text-brandBlueDark font-semibold' : 'border-l-4 border-transparent'} font-medium" data-target="${hasSubMenu ? 'submenu-' + category.id : ''}">
+                        <div class="flex items-center">
+                            <i class="fa-solid ${category.icon} w-6 text-center transition-colors ${isActive ? 'text-brandBlueLight' : 'text-slate-500 group-hover:text-brandBlueLight'}"></i>
+                            <span class="ml-3 text-sm">${category.title}</span>
+                        </div>
+                        ${hasSubMenu ? `<i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300 chevron text-slate-400"></i>` : ''}
+                    </button>
+                    ${hasSubMenu ? `
+                    <ul id="submenu-${category.id}" class="submenu flex flex-col mt-1 space-y-1">
+                        ${category.items.map(item => `
+                            <li>
+                                <a href="#" class="submenu-link block py-2 pl-12 pr-4 text-sm text-slate-600 hover:text-brandBlueDark hover:bg-sky-200 rounded-lg transition-colors font-medium">
+                                    ${item}
+                                </a>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    ` : ''}
+                </div>
+            `;
+        });
+        navContainer.innerHTML = navHTML;
+
+        // --- 3. Sidebar Interactions ---
+        document.querySelectorAll('.nav-toggle').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const targetId = e.currentTarget.getAttribute('data-target');
+                if(!targetId) return; // For dashboard with no submenu
+                
+                const targetMenu = document.getElementById(targetId);
+                const chevron = e.currentTarget.querySelector('.chevron');
+                const isOpen = targetMenu.classList.contains('open');
+
+                // Accordion behavior: close others
+                document.querySelectorAll('.submenu').forEach(menu => menu.classList.remove('open'));
+                document.querySelectorAll('.chevron').forEach(icon => icon.classList.remove('rotate-180'));
+                
+                // Toggle current
+                if (!isOpen) {
+                    targetMenu.classList.add('open');
+                    chevron.classList.add('rotate-180');
+                }
+            });
+        });
+
+        // Mobile Sidebar Toggle
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+        function toggleMobileSidebar() {
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+            if (isClosed) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebarBackdrop.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                sidebarBackdrop.classList.add('hidden');
+            }
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMobileSidebar);
+        sidebarBackdrop.addEventListener('click', toggleMobileSidebar);
+
+        // --- 4. Chart.js Initialization (Orange & Blue Theme) ---
+        document.addEventListener("DOMContentLoaded", function() {
+            const ctx = document.getElementById('stockMovementChart').getContext('2d');
+            
+            // Blue Gradient for Stock In
+            const gradientBlue = ctx.createLinearGradient(0, 0, 0, 300);
+            gradientBlue.addColorStop(0, '#2563eb'); // brandBlueLight
+            gradientBlue.addColorStop(1, 'rgba(37, 99, 235, 0.2)');
+
+            // Orange Gradient for Stock Out
+            const gradientOrange = ctx.createLinearGradient(0, 0, 0, 300);
+            gradientOrange.addColorStop(0, '#f97316'); // brandOrange
+            gradientOrange.addColorStop(1, 'rgba(249, 115, 22, 0.2)');
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+                    datasets: [
+                        {
+                            label: 'Stock In',
+                            data: [420, 380, 510, 480, 620, 550],
+                            backgroundColor: gradientBlue,
+                            borderRadius: 6,
+                            barPercentage: 0.5,
+                            categoryPercentage: 0.8
+                        },
+                        {
+                            label: 'Stock Out',
+                            data: [290, 310, 410, 390, 450, 480],
+                            backgroundColor: gradientOrange,
+                            borderRadius: 6,
+                            barPercentage: 0.5,
+                            categoryPercentage: 0.8
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false // Hidden because we built a custom legend in HTML
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#1e3a8a', // brandBlue
+                            titleFont: { family: "'Inter', sans-serif", size: 13 },
+                            bodyFont: { family: "'Inter', sans-serif", size: 13 },
+                            padding: 12,
+                            cornerRadius: 8,
+                            boxPadding: 4
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#f1f5f9', // slate-100
+                                drawBorder: false
+                            },
+                            ticks: {
+                                font: { family: "'Inter', sans-serif", size: 11 },
+                                color: '#64748b' // slate-500
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            },
+                            ticks: {
+                                font: { family: "'Inter', sans-serif", size: 12 },
+                                color: '#64748b'
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
